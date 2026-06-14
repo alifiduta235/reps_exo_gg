@@ -1,0 +1,213 @@
+<!--2572056 Alifi Duta Sangjaya-->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perpustakaan - 2572056</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            color: #333;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 250px;
+            padding: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 6px 15px;
+            cursor: pointer;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #ccc;
+            margin: 30px 0;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 600px;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .search-box {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <h2>Tambah Buku</h2>
+    <form id="formTambahBuku">
+        <div class="form-group">
+            <label>Judul</label>
+            <input type="text" name="judul" id="judul" required>
+        </div>
+        <div class="form-group">
+            <label>Penulis</label>
+            <input type="text" name="penulis" id="penulis" required>
+        </div>
+        <div class="form-group">
+            <label>Penerbit</label>
+            <input type="text" name="penerbit" id="penerbit" required>
+        </div>
+        <div class="form-group">
+            <label>Tahun Terbit</label>
+            <input type="number" name="tahun" id="tahun" required>
+        </div>
+        <div class="form-group">
+            <label>Stok</label>
+            <input type="number" name="stok" id="stok" required>
+        </div>
+        <button type="submit">Simpan</button>
+    </form>
+    <hr>
+    <h2>Daftar Buku</h2>
+
+    <div class="search-box">
+        <form id="formCari">
+            <label>Pencarian: </label>
+            <select name="kolom" id="kolomCari">
+                <option value="semua">Semua Kolom</option>
+                <option value="judul">Judul</option>
+                <option value="penulis">Penulis</option>
+                <option value="penerbit">Penerbit</option>
+                <option value="tahun_terbit">Tahun Terbit</option>
+            </select>
+            <input type="text" name="keyword" id="keywordCari" placeholder="Masukkan kata kunci..." style="width: 200px;">
+            <button type="submit">Cari</button>
+            <button type="button" id="btnReset">Reset</button>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Judul</th>
+                <th>Penulis</th>
+                <th>Penerbit</th>
+                <th>Tahun</th>
+                <th>Stok</th>
+            </tr>
+        </thead>
+        <tbody id="tabelBuku">
+            </tbody>
+    </table>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const tabelBuku = document.getElementById("tabelBuku");
+            const formTambah = document.getElementById("formTambahBuku");
+            const formCari = document.getElementById("formCari");
+            const btnReset = document.getElementById("btnReset");
+
+            function muatData(kolom = '', keyword = '') {
+                let url = 'api.php';
+                if (keyword !== '') {
+                    url += `?kolom=${kolom}&keyword=${encodeURIComponent(keyword)}`;
+                }
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        tabelBuku.innerHTML = "";
+                        
+                        if (data.length === 0) {
+                            tabelBuku.innerHTML = "<tr><td colspan='6' style='text-align:center;'>Data buku tidak ditemukan</td></tr>";
+                            return;
+                        }
+
+                        data.forEach((buku, index) => {
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                                <td>${index + 1}</td>
+                                <td>${escapeHTML(buku.judul)}</td>
+                                <td>${escapeHTML(buku.penulis)}</td>
+                                <td>${escapeHTML(buku.penerbit)}</td>
+                                <td>${escapeHTML(buku.tahun_terbit)}</td>
+                                <td>${escapeHTML(buku.stok)}</td>
+                            `;
+                            tabelBuku.appendChild(row);
+                        });
+                    })
+                    .catch(error => console.error("Gagal memuat data:", error));
+            }
+
+            function escapeHTML(str) {
+                return str.replace(/[&<>'"]/g, 
+                    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+                );
+            }
+
+            formTambah.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                const formData = new FormData(formTambah);
+
+                fetch('api.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        formTambah.reset();
+                        muatData();
+                    } else {
+                        alert("Gagal menyimpan data: " + res.message);
+                    }
+                })
+                .catch(error => console.error("Error:", error));
+            });
+
+            formCari.addEventListener("submit", function (e) {
+                e.preventDefault();
+                const kolom = document.getElementById("kolomCari").value;
+                const keyword = document.getElementById("keywordCari").value;
+                muatData(kolom, keyword);
+            });
+
+            btnReset.addEventListener("click", function () {
+                document.getElementById("keywordCari").value = "";
+                document.getElementById("kolomCari").value = "semua";
+                muatData();
+            });
+
+            muatData();
+        });
+    </script>
+</body>
+</html>
